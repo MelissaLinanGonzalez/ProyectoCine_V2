@@ -1,6 +1,7 @@
 package _DAM.Cine_V2.servicio;
 
-import _DAM.Cine_V2.dto.RolDTO;
+import _DAM.Cine_V2.dto.rol.RolRequestDTO;
+import _DAM.Cine_V2.dto.rol.RolResponseDTO;
 import _DAM.Cine_V2.mapper.RolMapper;
 import _DAM.Cine_V2.modelo.Rol;
 import _DAM.Cine_V2.repositorio.RolRepository;
@@ -17,22 +18,30 @@ public class RolService {
     private final RolRepository rolRepository;
     private final RolMapper rolMapper;
 
-    public List<RolDTO> findAll() {
+    public List<RolResponseDTO> findAll() {
         return rolRepository.findAll().stream()
-                .map(rolMapper::toDTO)
+                .map(rolMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public RolDTO findById(Long id) {
+    public RolResponseDTO findById(Long id) {
         return rolRepository.findById(id)
-                .map(rolMapper::toDTO)
+                .map(rolMapper::toResponseDTO)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado con ID: " + id));
     }
 
-    public RolDTO save(RolDTO rolDTO) {
-        Rol rol = rolMapper.toEntity(rolDTO);
+    public RolResponseDTO save(RolRequestDTO rolRequestDTO) {
+        Rol rol = rolMapper.toEntity(rolRequestDTO);
         Rol saved = rolRepository.save(rol);
-        return rolMapper.toDTO(saved);
+        return rolMapper.toResponseDTO(saved);
+    }
+
+    public RolResponseDTO update(Long id, RolRequestDTO rolRequestDTO) {
+        Rol rol = rolRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado con ID: " + id));
+        rol.setNombre(rolRequestDTO.nombre());
+        Rol saved = rolRepository.save(rol);
+        return rolMapper.toResponseDTO(saved);
     }
 
     public void deleteById(Long id) {

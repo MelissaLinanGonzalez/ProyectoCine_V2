@@ -1,6 +1,7 @@
 package _DAM.Cine_V2.mapper;
 
-import _DAM.Cine_V2.dto.EntradaDTO;
+import _DAM.Cine_V2.dto.entrada.EntradaRequestDTO;
+import _DAM.Cine_V2.dto.entrada.EntradaResponseDTO;
 import _DAM.Cine_V2.modelo.Entrada;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -11,9 +12,11 @@ public interface EntradaMapper {
 
     @Mapping(target = "funcionId", source = "funcion.id")
     @Mapping(target = "ventaId", source = "venta.id")
-    EntradaDTO toDTO(Entrada entrada);
+    EntradaResponseDTO toResponseDTO(Entrada entrada);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "codigo", ignore = true)
     @Mapping(target = "funcion", ignore = true)
     @Mapping(target = "venta", ignore = true)
-    Entrada toEntity(EntradaDTO entradaDTO);
+    Entrada toEntity(EntradaRequestDTO entradaRequestDTO);
 }

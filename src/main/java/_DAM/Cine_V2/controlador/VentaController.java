@@ -1,6 +1,7 @@
 package _DAM.Cine_V2.controlador;
 
-import _DAM.Cine_V2.dto.VentaDTO;
+import _DAM.Cine_V2.dto.venta.VentaRequestDTO;
+import _DAM.Cine_V2.dto.venta.VentaResponseDTO;
 import _DAM.Cine_V2.servicio.VentaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,25 +19,24 @@ public class VentaController {
     private final VentaService ventaService;
 
     @GetMapping
-    public ResponseEntity<List<VentaDTO>> findAll() {
+    public ResponseEntity<List<VentaResponseDTO>> findAll() {
         return ResponseEntity.ok(ventaService.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VentaDTO> findById(@PathVariable Long id) {
+    public ResponseEntity<VentaResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(ventaService.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<VentaDTO> create(@Valid @RequestBody VentaDTO ventaDTO) {
-        return new ResponseEntity<>(ventaService.save(ventaDTO), HttpStatus.CREATED);
+    public ResponseEntity<VentaResponseDTO> create(@Valid @RequestBody VentaRequestDTO ventaRequestDTO) {
+        return new ResponseEntity<>(ventaService.save(ventaRequestDTO), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<VentaDTO> update(@PathVariable Long id, @Valid @RequestBody VentaDTO ventaDTO) {
-        VentaDTO toUpdate = new VentaDTO(id, ventaDTO.fecha(), ventaDTO.importeTotal(), ventaDTO.metodoPago(),
-                ventaDTO.estado(), ventaDTO.entradas(), ventaDTO.usuarioId());
-        return ResponseEntity.ok(ventaService.save(toUpdate));
+    public ResponseEntity<VentaResponseDTO> update(@PathVariable Long id,
+            @Valid @RequestBody VentaRequestDTO ventaRequestDTO) {
+        return ResponseEntity.ok(ventaService.update(id, ventaRequestDTO));
     }
 
     @DeleteMapping("/{id}")

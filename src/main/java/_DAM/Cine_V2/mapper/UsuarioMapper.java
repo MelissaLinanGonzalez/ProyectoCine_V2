@@ -1,6 +1,7 @@
 package _DAM.Cine_V2.mapper;
 
-import _DAM.Cine_V2.dto.UsuarioDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioRequestDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioResponseDTO;
 import _DAM.Cine_V2.modelo.Rol;
 import _DAM.Cine_V2.modelo.Usuario;
 import org.mapstruct.Mapper;
@@ -16,12 +17,12 @@ import java.util.stream.Collectors;
 public interface UsuarioMapper {
 
     @Mapping(target = "roles", source = "roles", qualifiedByName = "mapRolesToStrings")
-    @Mapping(target = "password", ignore = true) // Don't expose password in DTO by default or handle carefully
-    UsuarioDTO toDTO(Usuario usuario);
+    UsuarioResponseDTO toResponseDTO(Usuario usuario);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "ventas", ignore = true)
-    Usuario toEntity(UsuarioDTO usuarioDTO);
+    Usuario toEntity(UsuarioRequestDTO usuarioRequestDTO);
 
     @Named("mapRolesToStrings")
     default Set<String> mapRolesToStrings(Set<Rol> roles) {

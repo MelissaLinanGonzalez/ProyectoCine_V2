@@ -1,6 +1,7 @@
 package _DAM.Cine_V2.servicio;
 
-import _DAM.Cine_V2.dto.PeliculaDTO;
+import _DAM.Cine_V2.dto.pelicula.PeliculaRequestDTO;
+import _DAM.Cine_V2.dto.pelicula.PeliculaResponseDTO;
 import _DAM.Cine_V2.mapper.PeliculaMapper;
 import _DAM.Cine_V2.modelo.Actor;
 import _DAM.Cine_V2.modelo.Director;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,40 +27,70 @@ public class PeliculaService {
     private final PeliculaMapper peliculaMapper;
 
     @Transactional(readOnly = true)
-    public List<PeliculaDTO> findAll() {
+    public List<PeliculaResponseDTO> findAll() {
         return peliculaRepository.findAll().stream()
-                .map(peliculaMapper::toDTO)
+                .map(peliculaMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PeliculaDTO findById(Long id) {
+    public PeliculaResponseDTO findById(Long id) {
         return peliculaRepository.findById(id)
-                .map(peliculaMapper::toDTO)
+                .map(peliculaMapper::toResponseDTO)
                 .orElseThrow(() -> new RuntimeException("Pelicula no encontrada con ID: " + id));
     }
 
     @Transactional
-    public PeliculaDTO save(PeliculaDTO peliculaDTO) {
-        Pelicula pelicula = peliculaMapper.toEntity(peliculaDTO);
+    public PeliculaResponseDTO save(PeliculaRequestDTO peliculaRequestDTO) {
+        Pelicula pelicula = peliculaMapper.toEntity(peliculaRequestDTO);
 
-        if (peliculaDTO.directorId() != null) {
-            Director director = directorRepository.findById(peliculaDTO.directorId())
+        if (peliculaRequestDTO.directorId() != null) {
+            Director director = directorRepository.findById(peliculaRequestDTO.directorId())
                     .orElseThrow(
-                            () -> new RuntimeException("Director no encontrado con ID: " + peliculaDTO.directorId()));
+                            () -> new RuntimeException(
+                                    "Director no encontrado con ID: " + peliculaRequestDTO.directorId()));
             pelicula.setDirector(director);
         }
 
-        if (peliculaDTO.actorIds() != null && !peliculaDTO.actorIds().isEmpty()) {
-            List<Actor> actores = actorRepository.findAllById(peliculaDTO.actorIds());
-            if (actores.size() != peliculaDTO.actorIds().size()) {
+        if (peliculaRequestDTO.actorIds() != null && !peliculaRequestDTO.actorIds().isEmpty()) {
+            List<Actor> actores = actorRepository.findAllById(peliculaRequestDTO.actorIds());
+            if (actores.size() != peliculaRequestDTO.actorIds().size()) {
                 throw new RuntimeException("Algunos actores no fueron encontrados");
             }
             pelicula.setActores(new HashSet<>(actores));
         }
 
         Pelicula saved = peliculaRepository.save(pelicula);
-        return peliculaMapper.toDTO(saved);
+        return peliculaMapper.toResponseDTO(saved);
+    }
+
+    @Transactional
+    public PeliculaResponseDTO update(Long id, PeliculaRequestDTO peliculaRequestDTO) {
+        Pelicula pelicula = peliculaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pelicula no encontrada con ID: " + id));
+
+        pelicula.setTitulo(peliculaRequestDTO.titulo());
+        pelicula.setDuracion(peliculaRequestDTO.duracion());
+        pelicula.setEdadMinima(peliculaRequestDTO.edadMinima());
+
+        if (peliculaRequestDTO.directorId() != null) {
+            Director director = directorRepository.findById(peliculaRequestDTO.directorId())
+                    .orElseThrow(
+                            () -> new RuntimeException(
+                                    "Director no encontrado con ID: " + peliculaRequestDTO.directorId()));
+            pelicula.setDirector(director);
+        }
+
+        if (peliculaRequestDTO.actorIds() != null) {
+            List<Actor> actores = actorRepository.findAllById(peliculaRequestDTO.actorIds());
+            if (actores.size() != peliculaRequestDTO.actorIds().size()) {
+                throw new RuntimeException("Algunos actores no fueron encontrados");
+            }
+            pelicula.setActores(new HashSet<>(actores));
+        }
+
+        Pelicula saved = peliculaRepository.save(pelicula);
+        return peliculaMapper.toResponseDTO(saved);
     }
 
     @Transactional
