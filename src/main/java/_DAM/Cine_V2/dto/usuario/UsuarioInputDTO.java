@@ -5,9 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.util.Set;
 
-public record UsuarioRequestDTO(
+public record UsuarioInputDTO(
         @Email(message = "El formato del email no es válido") @NotBlank(message = "El email no puede estar vacío") String email,
         @NotBlank(message = "La contraseña es obligatoria") String password,
-        boolean enabled,
         Set<String> roles) {
 }

@@ -1,12 +1,15 @@
 package _DAM.Cine_V2.servicio;
 
-import _DAM.Cine_V2.dto.usuario.UsuarioRequestDTO;
-import _DAM.Cine_V2.dto.usuario.UsuarioResponseDTO;
+import _DAM.Cine_V2.dto.Login.LoginRequestDTO;
+import _DAM.Cine_V2.dto.Login.LoginResponseDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioInputDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioOutputDTO;
 import _DAM.Cine_V2.mapper.UsuarioMapper;
 import _DAM.Cine_V2.modelo.Rol;
 import _DAM.Cine_V2.modelo.Usuario;
 import _DAM.Cine_V2.repositorio.RolRepository;
 import _DAM.Cine_V2.repositorio.UsuarioRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,26 +27,26 @@ public class UsuarioService {
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
 
-    public List<UsuarioResponseDTO> findAll() {
+    public List<UsuarioOutputDTO> findAll() {
         return usuarioRepository.findAll().stream()
-                .map(usuarioMapper::toResponseDTO)
+                .map(usuarioMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
-    public UsuarioResponseDTO findById(Long id) {
+    public UsuarioOutputDTO findById(Long id) {
         return usuarioRepository.findById(id)
-                .map(usuarioMapper::toResponseDTO)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .map(usuarioMapper::toDTO)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrada con ID: " + id));
     }
 
     @Transactional
-    public UsuarioResponseDTO save(UsuarioRequestDTO usuarioRequestDTO) {
-        Usuario usuario = usuarioMapper.toEntity(usuarioRequestDTO);
+    public UsuarioOutputDTO save(UsuarioInputDTO usuarioDTO) {
+        Usuario usuario = usuarioMapper.toEntity(usuarioDTO);
 
         // Handle Roles
-        if (usuarioRequestDTO.roles() != null && !usuarioRequestDTO.roles().isEmpty()) {
+        if (usuarioDTO.roles() != null && !usuarioDTO.roles().isEmpty()) {
             Set<Rol> roles = new HashSet<>();
-            for (String rolNombre : usuarioRequestDTO.roles()) {
+            for (String rolNombre : usuarioDTO.roles()) {
                 Rol rol = rolRepository.findByNombre(rolNombre)
                         .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolNombre));
                 roles.add(rol);
@@ -51,27 +54,26 @@ public class UsuarioService {
             usuario.setRoles(roles);
         }
 
-        // Handle password
-        if (usuarioRequestDTO.password() != null && !usuarioRequestDTO.password().isBlank()) {
-            usuario.setPassword(usuarioRequestDTO.password()); // In real app, BCrypt here
+        // Handle password (basic for now)
+        if (usuarioDTO.password() != null && !usuarioDTO.password().isBlank()) {
+            usuario.setPassword(usuarioDTO.password()); // In real app, B.crypt here
         }
 
         Usuario saved = usuarioRepository.save(usuario);
-        return usuarioMapper.toResponseDTO(saved);
+        return usuarioMapper.toDTO(saved);
     }
 
     @Transactional
-    public UsuarioResponseDTO update(Long id, UsuarioRequestDTO usuarioRequestDTO) {
+    public UsuarioOutputDTO update(Long id, UsuarioInputDTO usuarioDTO) {
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrada con ID: " + id));
 
-        usuario.setEmail(usuarioRequestDTO.email());
-        usuario.setEnabled(usuarioRequestDTO.enabled());
+        usuarioMapper.update(usuarioDTO, usuario);
 
         // Handle Roles
-        if (usuarioRequestDTO.roles() != null && !usuarioRequestDTO.roles().isEmpty()) {
+        if (usuarioDTO.roles() != null) {
             Set<Rol> roles = new HashSet<>();
-            for (String rolNombre : usuarioRequestDTO.roles()) {
+            for (String rolNombre : usuarioDTO.roles()) {
                 Rol rol = rolRepository.findByNombre(rolNombre)
                         .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolNombre));
                 roles.add(rol);
@@ -79,13 +81,11 @@ public class UsuarioService {
             usuario.setRoles(roles);
         }
 
-        // Handle password only if provided
-        if (usuarioRequestDTO.password() != null && !usuarioRequestDTO.password().isBlank()) {
-            usuario.setPassword(usuarioRequestDTO.password()); // In real app, BCrypt here
+        if (usuarioDTO.password() != null && !usuarioDTO.password().isBlank()) {
+            usuario.setPassword(usuarioDTO.password());
         }
 
-        Usuario saved = usuarioRepository.save(usuario);
-        return usuarioMapper.toResponseDTO(saved);
+        return usuarioMapper.toDTO(usuarioRepository.save(usuario));
     }
 
     public void deleteById(Long id) {
@@ -93,5 +93,24 @@ public class UsuarioService {
             throw new RuntimeException("Usuario no encontrado con ID: " + id);
         }
         usuarioRepository.deleteById(id);
+    }
+
+    public LoginResponseDTO login(LoginRequestDTO request) {
+        // 1. Buscar por email
+        Usuario usuario = usuarioRepository.findByEmail(request.email())
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+
+        // 2. Comparar contraseña (ERROR GRAVE DE SEGURIDAD AQUÍ)
+        if (!usuario.getPassword().equals(request.password())) {
+            // throw new BadCredentialsException("Contraseña incorrecta");
+            throw new RuntimeException("Contraseña incorrecta"); // Cambiaremos a BadCredentialsException con Spring Security
+        }
+
+        // 3. Devolver DTO (NO entidad)
+        return new LoginResponseDTO(
+                usuario.getEmail(),
+                "Login exitoso (Inseguro)",
+                null
+        );
     }
 }

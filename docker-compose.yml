@@ -1,6 +1,6 @@
 services:
   postgres:
-    container_name: cine_db_container
+    container_name: cine_db_containerV1
     image: postgres:15
     environment:
       POSTGRES_USER: cine_user

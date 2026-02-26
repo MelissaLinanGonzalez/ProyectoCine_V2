@@ -1,12 +1,13 @@
 package _DAM.Cine_V2.mapper;
 
-import _DAM.Cine_V2.dto.usuario.UsuarioRequestDTO;
-import _DAM.Cine_V2.dto.usuario.UsuarioResponseDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioInputDTO;
+import _DAM.Cine_V2.dto.usuario.UsuarioOutputDTO;
 import _DAM.Cine_V2.modelo.Rol;
 import _DAM.Cine_V2.modelo.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
 import java.util.Collections;
@@ -17,12 +18,19 @@ import java.util.stream.Collectors;
 public interface UsuarioMapper {
 
     @Mapping(target = "roles", source = "roles", qualifiedByName = "mapRolesToStrings")
-    UsuarioResponseDTO toResponseDTO(Usuario usuario);
+    UsuarioOutputDTO toDTO(Usuario usuario);
 
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "ventas", ignore = true)
-    Usuario toEntity(UsuarioRequestDTO usuarioRequestDTO);
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "enabled", constant = "true") // Default enabled on creation
+    Usuario toEntity(UsuarioInputDTO usuarioInputDTO);
+
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "ventas", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "password", ignore = true) // Don't wipe password if null, service handles it
+    void update(UsuarioInputDTO usuarioInputDTO, @MappingTarget Usuario usuario);
 
     @Named("mapRolesToStrings")
     default Set<String> mapRolesToStrings(Set<Rol> roles) {
