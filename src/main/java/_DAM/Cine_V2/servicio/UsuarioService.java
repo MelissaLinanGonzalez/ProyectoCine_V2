@@ -1,5 +1,6 @@
 package _DAM.Cine_V2.servicio;
 
+import _DAM.Cine_V2.config.JwtUtil;
 import _DAM.Cine_V2.dto.Login.LoginRequestDTO;
 import _DAM.Cine_V2.dto.Login.LoginResponseDTO;
 import _DAM.Cine_V2.dto.Login.RegisterRequestDTO;
@@ -29,6 +30,7 @@ public class UsuarioService {
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder encoder; // Inyectado
+    private final JwtUtil jwtUtil;
 
     public List<UsuarioOutputDTO> findAll() {
         return usuarioRepository.findAll().stream()
@@ -143,6 +145,8 @@ public class UsuarioService {
             throw new RuntimeException("Credenciales incorrectas");
         }
 
-        return new LoginResponseDTO(u.getEmail(), "Login OK", "");
+        // Generamos el pase VIP (Token)
+        String token = jwtUtil.generateToken(u);
+        return new LoginResponseDTO(u.getEmail(), "Login OK", token);
     }
 }
