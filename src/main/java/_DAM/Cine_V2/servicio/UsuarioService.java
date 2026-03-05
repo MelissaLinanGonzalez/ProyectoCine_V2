@@ -2,6 +2,7 @@ package _DAM.Cine_V2.servicio;
 
 import _DAM.Cine_V2.dto.Login.LoginRequestDTO;
 import _DAM.Cine_V2.dto.Login.LoginResponseDTO;
+import _DAM.Cine_V2.dto.Login.RegisterRequestDTO;
 import _DAM.Cine_V2.dto.usuario.UsuarioInputDTO;
 import _DAM.Cine_V2.dto.usuario.UsuarioOutputDTO;
 import _DAM.Cine_V2.mapper.UsuarioMapper;
@@ -11,6 +12,7 @@ import _DAM.Cine_V2.repositorio.RolRepository;
 import _DAM.Cine_V2.repositorio.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
+    private final PasswordEncoder encoder; // Inyectado
 
     public List<UsuarioOutputDTO> findAll() {
         return usuarioRepository.findAll().stream()
@@ -95,6 +98,7 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
+    /* LOGIN SIN SCRIPT
     public LoginResponseDTO login(LoginRequestDTO request) {
         // 1. Buscar por email
         Usuario usuario = usuarioRepository.findByEmail(request.email())
@@ -112,5 +116,33 @@ public class UsuarioService {
                 "Login exitoso (Inseguro)",
                 null
         );
+    } */
+
+    // 🔹 REGISTRO
+    public void register(RegisterRequestDTO req) {
+        Usuario u = new Usuario();
+        u.setEmail(req.email());
+        // 🔐 CIFRAR ANTES DE GUARDAR
+        u.setPassword(encoder.encode(req.password()));
+
+        // u.setRol("USER);
+        Rol rolUser = rolRepository.findByNombre("ROLE_USER").orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+        Set<Rol> roles = new HashSet<>();
+        roles.add(rolUser);
+        u.setRoles(roles);
+        usuarioRepository.save(u);
+    }
+
+    // 🔹 LOGIN
+    public LoginResponseDTO login(LoginRequestDTO req) {
+        Usuario u = usuarioRepository.findByEmail(req.email())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado")); // OJO: Usar BadCredentialsException después
+
+        // 🔐 COMPARAR (Raw vs Hash)
+        if (!encoder.matches(req.password(), u.getPassword())) {
+            throw new RuntimeException("Credenciales incorrectas");
+        }
+
+        return new LoginResponseDTO(u.getEmail(), "Login OK", "");
     }
 }
