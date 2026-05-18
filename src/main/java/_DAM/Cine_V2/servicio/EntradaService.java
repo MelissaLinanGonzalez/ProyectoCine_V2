@@ -33,9 +33,28 @@ public class EntradaService {
 
     @Transactional(readOnly = true)
     public EntradaResponseDTO findById(Long id) {
-        return entradaRepository.findById(id)
-                .map(entradaMapper::toResponseDTO)
+        Entrada entrada = entradaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entrada no encontrada con ID: " + id));
+        
+        // Ownership check
+        String currentUserEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (!isAdmin && entrada.getVenta() != null && entrada.getVenta().getUsuario() != null && 
+            !entrada.getVenta().getUsuario().getEmail().equals(currentUserEmail)) {
+            throw new RuntimeException("Acceso denegado: No tienes permiso para ver esta entrada.");
+        }
+
+        return entradaMapper.toResponseDTO(entrada);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntradaResponseDTO> findMisEntradas(String email) {
+        return entradaRepository.findAll().stream()
+                .filter(e -> e.getVenta() != null && e.getVenta().getUsuario() != null && e.getVenta().getUsuario().getEmail().equals(email))
+                .map(entradaMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional

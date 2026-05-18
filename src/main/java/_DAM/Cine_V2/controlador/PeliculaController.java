@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class PeliculaController {
 
     private final PeliculaService peliculaService;
 
+    // PÚBLICO — Cartelera (permitido en SecurityConfig por GET)
     @GetMapping
     public ResponseEntity<List<PeliculaResponseDTO>> findAll() {
         return ResponseEntity.ok(peliculaService.findAll());
@@ -28,17 +30,21 @@ public class PeliculaController {
         return ResponseEntity.ok(peliculaService.findById(id));
     }
 
+    // SOLO ADMIN
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<PeliculaResponseDTO> create(@Valid @RequestBody PeliculaRequestDTO peliculaRequestDTO) {
         return new ResponseEntity<>(peliculaService.save(peliculaRequestDTO), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<PeliculaResponseDTO> update(@PathVariable Long id,
             @Valid @RequestBody PeliculaRequestDTO peliculaRequestDTO) {
         return ResponseEntity.ok(peliculaService.update(id, peliculaRequestDTO));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         peliculaService.deleteById(id);

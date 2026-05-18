@@ -7,6 +7,7 @@ import _DAM.Cine_V2.dto.Login.RegisterRequestDTO;
 import _DAM.Cine_V2.dto.usuario.UsuarioInputDTO;
 import _DAM.Cine_V2.dto.usuario.UsuarioOutputDTO;
 import _DAM.Cine_V2.mapper.UsuarioMapper;
+import _DAM.Cine_V2.modelo.RefreshToken;
 import _DAM.Cine_V2.modelo.Rol;
 import _DAM.Cine_V2.modelo.Usuario;
 import _DAM.Cine_V2.repositorio.RolRepository;
@@ -29,8 +30,9 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
-    private final PasswordEncoder encoder; // Inyectado
+    private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     public List<UsuarioOutputDTO> findAll() {
         return usuarioRepository.findAll().stream()
@@ -100,53 +102,40 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    /* LOGIN SIN SCRIPT
-    public LoginResponseDTO login(LoginRequestDTO request) {
-        // 1. Buscar por email
-        Usuario usuario = usuarioRepository.findByEmail(request.email())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
-
-        // 2. Comparar contraseña (ERROR GRAVE DE SEGURIDAD AQUÍ)
-        if (!usuario.getPassword().equals(request.password())) {
-            // throw new BadCredentialsException("Contraseña incorrecta");
-            throw new RuntimeException("Contraseña incorrecta"); // Cambiaremos a BadCredentialsException con Spring Security
-        }
-
-        // 3. Devolver DTO (NO entidad)
-        return new LoginResponseDTO(
-                usuario.getEmail(),
-                "Login exitoso (Inseguro)",
-                null
-        );
-    } */
-
-    // 🔹 REGISTRO
-    public void register(RegisterRequestDTO req) {
+    // 🔹 REGISTRO — devuelve tokens
+    @Transactional
+    public LoginResponseDTO register(RegisterRequestDTO req) {
         Usuario u = new Usuario();
         u.setEmail(req.email());
-        // 🔐 CIFRAR ANTES DE GUARDAR
         u.setPassword(encoder.encode(req.password()));
 
-        // u.setRol("USER);
-        Rol rolUser = rolRepository.findByNombre("ROLE_ADMIN").orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+        Rol rolUser = rolRepository.findByNombre("ROLE_USER")
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         Set<Rol> roles = new HashSet<>();
         roles.add(rolUser);
         u.setRoles(roles);
         usuarioRepository.save(u);
+
+        // Generar tokens
+        String accessToken = jwtUtil.generateToken(u);
+        RefreshToken refreshToken = refreshTokenService.crearRefreshToken(u.getEmail());
+
+        return new LoginResponseDTO(u.getEmail(), "Registro OK", accessToken, refreshToken.getToken());
     }
 
     // 🔹 LOGIN
+    @Transactional
     public LoginResponseDTO login(LoginRequestDTO req) {
         Usuario u = usuarioRepository.findByEmail(req.email())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado")); // OJO: Usar BadCredentialsException después
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // 🔐 COMPARAR (Raw vs Hash)
         if (!encoder.matches(req.password(), u.getPassword())) {
             throw new RuntimeException("Credenciales incorrectas");
         }
 
-        // Generamos el pase VIP (Token)
-        String token = jwtUtil.generateToken(u);
-        return new LoginResponseDTO(u.getEmail(), "Login OK", token);
+        String accessToken = jwtUtil.generateToken(u);
+        RefreshToken refreshToken = refreshTokenService.crearRefreshToken(u.getEmail());
+
+        return new LoginResponseDTO(u.getEmail(), "Login OK", accessToken, refreshToken.getToken());
     }
 }

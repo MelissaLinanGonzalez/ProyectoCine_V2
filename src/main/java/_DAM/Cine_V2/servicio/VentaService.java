@@ -36,9 +36,19 @@ public class VentaService {
     }
 
     public VentaResponseDTO findById(Long id) {
-        return ventaRepository.findById(id)
-                .map(ventaMapper::toResponseDTO)
+        Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada con ID: " + id));
+        
+        // Ownership check
+        String currentUserEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (!isAdmin && venta.getUsuario() != null && !venta.getUsuario().getEmail().equals(currentUserEmail)) {
+            throw new RuntimeException("Acceso denegado: No tienes permiso para ver esta venta.");
+        }
+
+        return ventaMapper.toResponseDTO(venta);
     }
 
     @Transactional
